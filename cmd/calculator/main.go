@@ -1,10 +1,13 @@
 package main
 
 import (
+	calculator "cmd_project"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -49,7 +52,24 @@ func (m *Main) Run(args ...string) error {
 		fmt.Fprintln(m.Stderr, m.Usage())
 		return ErrUsage
 	}
-	return ErrorUnknownCommand
+
+	// Execute command.
+	switch args[0] {
+	case "help":
+		fmt.Fprintln(m.Stderr, m.Usage())
+		return ErrUsage
+	case "add":
+		return newAddCommand(m).Run(args...)
+	case "subtract":
+		return nil
+	case "divide":
+		return nil
+	case "multiply":
+		return nil
+	default:
+		return ErrorUnknownCommand
+
+	}
 }
 
 func (m *Main) Usage() string {
@@ -64,3 +84,54 @@ The commands are:
     divide    divide first number by second number time
 `, "\n")
 }
+
+// AddCommand represents the "add" command execution.
+type AddCommand struct {
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
+// NewAddCommand returns a AddCommand.
+func newAddCommand(m *Main) *AddCommand {
+	return &AddCommand{
+		Stdin:  m.Stdin,
+		Stdout: m.Stdout,
+		Stderr: m.Stderr,
+	}
+}
+
+// Run executes the command.
+func (cmd *AddCommand) Run(args ...string) error {
+	// Parse flags.
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	help := fs.Bool("h", false, "")
+	if err := fs.Parse(args); err != nil {
+		return err
+	} else if *help {
+		fmt.Fprintln(cmd.Stderr, cmd.Usage())
+		return ErrUsage
+	}
+
+	x, err := strconv.Atoi(args[1])
+	if err != nil {
+		return ErrorInvalidInput
+	}
+
+	y, err := strconv.Atoi(args[2])
+	if err != nil {
+		return ErrorInvalidInput
+	}
+
+	fmt.Fprintf(cmd.Stdout, "(%d) adds (%d) equals %d\n", x, y, calculator.Add(x, y))
+	return nil
+}
+
+// Usage returns the help message for AddCommand
+func (cmd *AddCommand) Usage() string {
+	return strings.TrimLeft(`
+usage: add two numbers
+return numbers of two integers
+`, "\n")
+}
+
